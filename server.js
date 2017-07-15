@@ -1,4 +1,3 @@
-
 var express = require('express');
 var morgan = require('morgan');
 var mongoose = require('mongoose');
@@ -14,21 +13,28 @@ var passport = require('passport');
 
 var secret = require('./config/config');
 var User = require('./models/user');
+var Category = require('./models/category');
 
 var app= express();
-
-mongoose.connect(secret.database,function(err){
+mongoose.Promise = global.Promise;
+mongoose.connect(secret.database,{ useMongoClient: true },function(err){
 	if(err) throw(err);
 	console.log("database connected");
 });
 
 
 
+app.use(bodyParser.json());
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
+
 
 app.use(express.static(__dirname + '/public'));
 app.use(morgan('dev')); 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended:true}));
+// app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({extended:true}));
 
 app.use(cookieParser());
 
@@ -48,15 +54,27 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.use(function(req, res, next) {
+  Category.find({}, function(err, categories) {
+    if (err) return next(err);
+    res.locals.categories = categories;
+    next();
+  });
+});
+
 app.engine('ejs',engine);
 app.set('view engine','ejs');
 
 
 var mainRoutes = require('./routes/main');
 var userRoutes = require('./routes/user');
+var adminRoutes = require('./routes/admin');
+var apiRoutes = require('./api/api');
 
 app.use(mainRoutes);
 app.use(userRoutes);
+app.use(adminRoutes);
+app.use('/api', apiRoutes);
 
 
 app.listen(secret.port ,function(err){
